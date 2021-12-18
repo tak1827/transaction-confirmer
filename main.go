@@ -8,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
 	// "github.com/davecgh/go-spew/spew"
+	"github.com/tak1827/go-store/store"
+	"github.com/tak1827/transaction-confirmer/pb"
 )
 
 var (
@@ -25,6 +27,10 @@ func errHandler(err error) {
 }
 
 func main() {
+	leveldb, err := store.NewLevelDB("")
+	errHandler(err)
+	txStore := store.NewPrefixStore(leveldb, pb.PREFIX_PENDING_TX)
+
 	ctx := context.Background()
 	client, err := newClient(Endpoint)
 	errHandler(err)
@@ -46,6 +52,20 @@ func main() {
 	hash, err := client.SendTx(ctx, tx)
 	errHandler(err)
 
+	now := time.Now()
+	transactoin := pb.Transaction{
+		Id:        hash,
+		To:        to.String(),
+		Nonce:     nonce,
+		Status:    pb.Transaction_PENDING,
+		UpdatedAt: &now,
+	}
+	key := transactoin.StoreKey()
+	value, err := transactoin.Marshal()
+	errHandler(err)
+	err = txStore.Put(key, value)
+	errHandler(err)
+
 	confirmed := false
 	counter := 0
 	for !confirmed {
@@ -54,6 +74,15 @@ func main() {
 		err = client.ConfirmTx(ctx, hash, 0)
 		if err == nil {
 			confirmed = true
+
+			value, err = txStore.Get(key)
+			errHandler(err)
+			var t pb.Transaction
+			err = t.Unmarshal(value)
+			errHandler(err)
+			fmt.Printf("t: %v\n", t)
+			err = txStore.Delete(key)
+			errHandler(err)
 			continue
 		}
 
