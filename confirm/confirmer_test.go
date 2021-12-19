@@ -1,4 +1,4 @@
-package confirmer
+package confirm
 
 import (
 	"context"

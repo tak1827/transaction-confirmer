@@ -1,4 +1,4 @@
-package confirmer
+package confirm
 
 import (
 	"github.com/pkg/errors"

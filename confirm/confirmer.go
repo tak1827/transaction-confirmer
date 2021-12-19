@@ -1,4 +1,4 @@
-package confirmer
+package confirm
 
 import (
 	"context"
@@ -82,9 +82,11 @@ func (c *Confirmer) DequeueTx(ctx context.Context) error {
 		return nil
 	}
 
-	e := v.(entry)
-
-	if time.Now().Unix() < e.updatedAt+c.confirmationInterval {
+	var (
+		e   = v.(entry)
+		now = time.Now().Unix()
+	)
+	if now < e.updatedAt+c.confirmationInterval {
 		if err := c.queue.Enqueue(e); err != nil {
 			return errors.Wrap(err, "err Enqueue")
 		}
@@ -92,15 +94,15 @@ func (c *Confirmer) DequeueTx(ctx context.Context) error {
 	}
 
 	if err := c.client.ConfirmTx(ctx, e.hash, c.confirmationBlocks); err != nil {
-
-		if !errors.Is(err, ErrTxNotFound) && !errors.Is(err, ErrTxConfirmPending) {
-			return errors.Wrap(err, "err ConfirmTx")
+		if errors.Is(err, ErrTxNotFound) || errors.Is(err, ErrTxConfirmPending) {
+			e.updatedAt = now
+			if err = c.queue.Enqueue(e); err != nil {
+				return errors.Wrap(err, "err Enqueue")
+			}
+			return nil
 		}
 
-		if err = c.queue.Enqueue(e); err != nil {
-			return errors.Wrap(err, "err Enqueue")
-		}
-		return nil
+		return errors.Wrap(err, "err ConfirmTx")
 	}
 
 	if err := c.afterTxConfirmed(e.hash); err != nil {
