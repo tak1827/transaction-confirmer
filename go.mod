@@ -10,7 +10,7 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.7.0
-	github.com/tak1827/go-queue v0.0.0-20211217004432-ee2d6b8590a3
+	github.com/tak1827/go-queue v0.0.0-20211219063532-f89670d8ffc1
 	github.com/tak1827/go-store v0.0.0-20211213035933-13a7db19971d
 	google.golang.org/protobuf v1.27.1
 )

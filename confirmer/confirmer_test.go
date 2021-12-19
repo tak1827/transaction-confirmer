@@ -2,7 +2,6 @@ package confirmer
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -26,7 +25,7 @@ func (c *MockClient) ConfirmTx(ctx context.Context, hash string, confirmationBlo
 }
 
 func TestClose(t *testing.T) {
-	c := NewConfirmer(&MockClient{}, 100, WithWorkers(2), WithTimeout(3))
+	c := NewConfirmer(&MockClient{}, 0, WithWorkers(2), WithTimeout(3))
 
 	c.Start()
 	c.Close()
@@ -66,20 +65,18 @@ func TestSendTxDequeueTx(t *testing.T) {
 			unconfirmed: make(map[string]struct{}, len(txs)),
 		}
 		sent = func(h string) error {
-			fmt.Printf("sent: %s\n", h)
 			checker.deleteSent(h)
 			return nil
 		}
 		confirmedCounter = uint32(0)
 		confirmed        = func(h string) error {
-			fmt.Printf("confirmed: %s\n", h)
 			checker.deleteConfirmed(h)
 			atomic.AddUint32(&confirmedCounter, 1)
 			return nil
 		}
 	)
 
-	c := NewConfirmer(&MockClient{}, 0, WithWorkers(2), WithTimeout(3), WithAfterTxSent(sent), WithAfterTxConfirmed(confirmed))
+	c := NewConfirmer(&MockClient{}, 5, WithWorkers(2), WithTimeout(3), WithAfterTxSent(sent), WithAfterTxConfirmed(confirmed))
 	err := c.Start()
 	require.NoError(t, err)
 

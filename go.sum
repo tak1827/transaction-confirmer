@@ -368,8 +368,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 h1:epCh84lMvA70Z7CTTCmYQn2CKbY8j86K7/FAIr141uY=
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7/go.mod h1:q4W45IWZaF22tdD+VEXcAWRA037jwmWEB5VWYORlTpc=
-github.com/tak1827/go-queue v0.0.0-20211217004432-ee2d6b8590a3 h1:WspfGlHisRqIwFg7lMoHT5Q5KZ+Rkn7bpYQH45wnZbU=
-github.com/tak1827/go-queue v0.0.0-20211217004432-ee2d6b8590a3/go.mod h1:Ooh83/H1mtQMUhZjmmmNCZE9apM9xumjLFLUaSyZNDk=
+github.com/tak1827/go-queue v0.0.0-20211219063532-f89670d8ffc1 h1:Hff5qiZ59jHAUCwOUX0paccR50SQQMhGjlktdWNdWT0=
+github.com/tak1827/go-queue v0.0.0-20211219063532-f89670d8ffc1/go.mod h1:Ooh83/H1mtQMUhZjmmmNCZE9apM9xumjLFLUaSyZNDk=
 github.com/tak1827/go-store v0.0.0-20211213035933-13a7db19971d h1:a7oWg8A6isV8l2tvXw2tyveXy6ZLAHPYn3p6jf7lLr4=
 github.com/tak1827/go-store v0.0.0-20211213035933-13a7db19971d/go.mod h1:unCd8zszcl6/YWlJ0f0wQ5iHX88Jf4+/HWZeqsT1K00=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
