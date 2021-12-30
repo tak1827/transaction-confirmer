@@ -17,6 +17,7 @@ type Confirmer struct {
 	confirmationBlocks   uint64
 	confirmationInterval int64 // sec
 	workers              int
+	workerInterval       int64 // milisec
 	timeout              int64 // sec
 
 	afterTxSent      func(string) error
@@ -34,12 +35,17 @@ type entry struct {
 func NewConfirmer(client Client, queueSize int, opts ...Opt) Confirmer {
 	q := queue.NewQueue(queueSize, false)
 
+	if DEFAULT_WORKERS == 0 {
+		DEFAULT_WORKERS = 1
+	}
+
 	c := Confirmer{
 		client:               client,
 		queue:                &q,
 		confirmationBlocks:   DEFAULT_CONFIEMATION_BLOCKS,
 		confirmationInterval: DEFAULT_CONFIEMATION_INTERVAL,
 		workers:              DEFAULT_WORKERS,
+		workerInterval:       DEFAULT_WORKER_INTERVAL,
 		timeout:              DEFAULT_TIMEOUT,
 		afterTxSent:          DefaultAfterTxSent,
 		afterTxConfirmed:     DefaultAfterTxConfirmed,
@@ -116,32 +122,40 @@ func (c *Confirmer) QueueLen() int {
 	return c.queue.Len()
 }
 
-func (c *Confirmer) Start() error {
-	worker := func(c *Confirmer, id int) {
-		for !c.closing() {
-			ctx, cancel := c.withTimeout()
-			defer cancel()
+func (c *Confirmer) Start(ctx context.Context) error {
 
-			if err := c.DequeueTx(ctx); err != nil {
-				c.errHandler(err)
+	worker := func(cancelCtx context.Context, c *Confirmer, id int) {
+		timer := time.NewTicker(time.Duration(c.workerInterval) * time.Millisecond)
+		defer timer.Stop()
+
+		for {
+			select {
+			case <-cancelCtx.Done():
+				fmt.Printf("worker(%d) is closing\n", id)
+				atomic.AddUint32(&c.closeCounter, 1)
+				return
+			case <-timer.C:
+				ctx, cancel := c.withTimeout()
+				defer cancel()
+
+				if err := c.DequeueTx(ctx); err != nil {
+					c.errHandler(err)
+				}
 			}
 		}
-
-		fmt.Printf("worker(%d) is closing\n", id)
-		atomic.AddUint32(&c.closeCounter, 1)
 	}
 
 	for i := 0; i < c.workers; i++ {
 		id := i + 1
-		go worker(c, id)
+		go worker(ctx, c, id)
 	}
 
 	fmt.Print("confirmer is ready\n")
 	return nil
 }
 
-func (c *Confirmer) Close() {
-	atomic.AddUint32(&c.closeCounter, 1)
+func (c *Confirmer) Close(canncel context.CancelFunc) {
+	canncel()
 	for !c.closed() {
 	}
 	fmt.Print("confirmer is closed\n")
@@ -157,5 +171,5 @@ func (c *Confirmer) closing() bool {
 }
 
 func (c *Confirmer) closed() bool {
-	return atomic.LoadUint32(&c.closeCounter) >= 1+uint32(c.workers)
+	return atomic.LoadUint32(&c.closeCounter) >= uint32(c.workers)
 }

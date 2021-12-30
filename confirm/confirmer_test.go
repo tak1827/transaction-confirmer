@@ -25,10 +25,11 @@ func (c *MockClient) ConfirmTx(ctx context.Context, hash string, confirmationBlo
 }
 
 func TestClose(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
 	c := NewConfirmer(&MockClient{}, 0, WithWorkers(2), WithTimeout(3))
 
-	c.Start()
-	c.Close()
+	c.Start(ctx)
+	c.Close(cancel)
 }
 
 type safeMap struct {
@@ -53,7 +54,8 @@ func (s *safeMap) deleteConfirmed(hash string) {
 
 func TestSendTxDequeueTx(t *testing.T) {
 	var (
-		txs = []string{
+		ctx, cancel = context.WithCancel(context.Background())
+		txs         = []string{
 			"0x01",
 			"0x02",
 			"0x03",
@@ -77,7 +79,7 @@ func TestSendTxDequeueTx(t *testing.T) {
 	)
 
 	c := NewConfirmer(&MockClient{}, 5, WithWorkers(2), WithTimeout(3), WithAfterTxSent(sent), WithAfterTxConfirmed(confirmed))
-	err := c.Start()
+	err := c.Start(ctx)
 	require.NoError(t, err)
 
 	for _, tx := range txs {
@@ -93,7 +95,7 @@ func TestSendTxDequeueTx(t *testing.T) {
 		}
 	}
 
-	c.Close()
+	c.Close(cancel)
 
 	require.Equal(t, len(checker.unsent), 0)
 	require.Equal(t, len(checker.unconfirmed), 0)

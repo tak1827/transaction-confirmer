@@ -7,6 +7,7 @@ import (
 const (
 	DEFAULT_CONFIEMATION_BLOCKS   = uint64(2)
 	DEFAULT_CONFIEMATION_INTERVAL = int64(1) // 1s
+	DEFAULT_WORKER_INTERVAL       = int64(10)
 	DEFAULT_TIMEOUT               = int64(60)
 )
 
@@ -48,6 +49,16 @@ func (i ConfirmationInterval) Apply(c *Confirmer) {
 }
 func WithConfirmationInterval(i int64) ConfirmationInterval {
 	return ConfirmationInterval(i)
+}
+
+// WorkerInterval
+type WorkerInterval int64
+
+func (i WorkerInterval) Apply(c *Confirmer) {
+	c.workerInterval = int64(i)
+}
+func WithWorkerInterval(i int64) WorkerInterval {
+	return WorkerInterval(i)
 }
 
 // Workers
