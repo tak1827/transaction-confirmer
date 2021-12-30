@@ -10,7 +10,7 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/tak1827/go-store v0.0.0-20211213035933-13a7db19971d
-	github.com/tak1827/transaction-confirmer v0.0.0-20211219142225-0f21376d0093
+	github.com/tak1827/transaction-confirmer v0.0.0-20211230023226-8ea7cabae757
 	google.golang.org/protobuf v1.27.1
 )
 

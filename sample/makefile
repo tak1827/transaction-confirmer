@@ -9,3 +9,6 @@ proto:
 
 lint:
 	go vet ./...
+
+time:
+	gtime -f '%P %Uu %Ss %er %MkB %C' "$@" go run ./

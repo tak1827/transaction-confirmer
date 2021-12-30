@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	Endpoint = "http://127.0.0.1:8545"
+	Endpoint = "http://localhost:8545"
 	PrivKey  = "d1c71e71b06e248c8dbe94d49ef6d6b0d64f5d71b1e33a0f39e14dadb070304a"
 )
 
 func main() {
 	var (
-		ctx     = context.Background()
+		ctx, cancel = context.WithCancel(context.Background())
 		txStore = txStore()
 	)
 
@@ -45,21 +45,21 @@ func main() {
 		return txStore.Delete([]byte(hash))
 	}
 
-	confirmer := confirm.NewConfirmer(&client, 100, confirm.WithWorkers(2), confirm.WithTimeout(15), confirm.WithAfterTxSent(sent), confirm.WithAfterTxConfirmed(confirmed))
+	confirmer := confirm.NewConfirmer(&client, 100, confirm.WithWorkers(2), confirm.WithWorkerInterval(100), confirm.WithTimeout(15), confirm.WithAfterTxSent(sent), confirm.WithAfterTxConfirmed(confirmed))
 
-	confirmer.Start()
+	confirmer.Start(ctx)
 
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 
-	ticker := time.NewTicker(10 * time.Millisecond)
+	ticker := time.NewTicker(1000 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ch:
 			log.Logger.Info().Msg("shutting down...")
-			confirmer.Close()
+			confirmer.Close(cancel)
 			return
 		case <-ticker.C:
 			tx := buildTx(&client, &wallet, txStore)
