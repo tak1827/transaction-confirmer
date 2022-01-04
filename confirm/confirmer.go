@@ -10,6 +10,11 @@ import (
 	"github.com/tak1827/go-queue/queue"
 )
 
+type (
+	HashHandler func(string) error
+	ErrHandler  func(string, error)
+)
+
 type Confirmer struct {
 	client Client
 	queue  *queue.Queue
@@ -20,9 +25,9 @@ type Confirmer struct {
 	workerInterval       int64 // milisec
 	timeout              int64 // sec
 
-	afterTxSent      func(string) error
-	afterTxConfirmed func(string) error
-	errHandler       func(string, error)
+	afterTxSent      HashHandler
+	afterTxConfirmed HashHandler
+	errHandler       ErrHandler
 
 	closeCounter uint32
 }

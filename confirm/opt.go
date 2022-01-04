@@ -91,7 +91,7 @@ func WithTimeout(t int64) Timeout {
 type AfterTxSent func(string) error
 
 func (f AfterTxSent) Apply(c *Confirmer) {
-	c.afterTxSent = f
+	c.afterTxSent = HashHandler(f)
 }
 func WithAfterTxSent(f func(string) error) AfterTxSent {
 	return AfterTxSent(f)
@@ -101,14 +101,11 @@ func WithAfterTxSent(f func(string) error) AfterTxSent {
 type AfterTxConfirmed func(string) error
 
 func (f AfterTxConfirmed) Apply(c *Confirmer) {
-	c.afterTxConfirmed = f
+	c.afterTxConfirmed = HashHandler(f)
 }
 func WithAfterTxConfirmed(f func(string) error) AfterTxConfirmed {
 	return AfterTxConfirmed(f)
 }
-
-// ErrHandler
-type ErrHandler func(string, error)
 
 func (f ErrHandler) Apply(c *Confirmer) {
 	c.errHandler = f
