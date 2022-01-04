@@ -23,7 +23,7 @@ func DefaultAfterTxConfirmed(hash string) error {
 	return nil
 }
 
-func DefaultErrHandler(err error) {
+func DefaultErrHandler(hash string, err error) {
 	panic(err.Error())
 }
 
@@ -108,11 +108,11 @@ func WithAfterTxConfirmed(f func(string) error) AfterTxConfirmed {
 }
 
 // ErrHandler
-type ErrHandler func(error)
+type ErrHandler func(string, error)
 
 func (f ErrHandler) Apply(c *Confirmer) {
 	c.errHandler = f
 }
-func WithErrHandler(f func(error)) ErrHandler {
+func WithErrHandler(f func(string, error)) ErrHandler {
 	return ErrHandler(f)
 }

@@ -2,6 +2,7 @@ package confirm
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -17,7 +18,12 @@ func (c *MockClient) SendTx(ctx context.Context, tx interface{}) (string, error)
 	return hash, nil
 }
 
+var MockClientError error
+
 func (c *MockClient) ConfirmTx(ctx context.Context, hash string, confirmationBlocks uint64) error {
+	if MockClientError != nil {
+		return MockClientError
+	}
 	if time.Now().Unix()%2 == 0 {
 		return ErrTxConfirmPending
 	}
@@ -99,4 +105,38 @@ func TestSendTxDequeueTx(t *testing.T) {
 
 	require.Equal(t, len(checker.unsent), 0)
 	require.Equal(t, len(checker.unconfirmed), 0)
+}
+
+func TestErrHandle(t *testing.T) {
+	var (
+		ctx, cancel  = context.WithCancel(context.Background())
+		expectedHash = "0x01"
+		expectedErr  = ErrTxFailed
+		closing      = make(chan struct{})
+		errHandler   = func(h string, err error) {
+			defer close(closing)
+
+			if !errors.Is(err, expectedErr) {
+				panic("unexpected error")
+			}
+
+			if h != expectedHash {
+				panic("unexpected hash")
+			}
+		}
+	)
+
+	// set error
+	MockClientError = ErrTxFailed
+
+	c := NewConfirmer(&MockClient{}, 5, WithWorkers(1), WithErrHandler(errHandler))
+	err := c.Start(ctx)
+	require.NoError(t, err)
+
+	c.EnqueueTx(context.Background(), expectedHash)
+
+	<-closing
+
+	c.Close(cancel)
+	MockClientError = nil
 }

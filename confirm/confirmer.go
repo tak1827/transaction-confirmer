@@ -22,7 +22,7 @@ type Confirmer struct {
 
 	afterTxSent      func(string) error
 	afterTxConfirmed func(string) error
-	errHandler       func(error)
+	errHandler       func(string, error)
 
 	closeCounter uint32
 }
@@ -82,40 +82,46 @@ func (c *Confirmer) EnqueueTx(ctx context.Context, tx interface{}) error {
 	return nil
 }
 
-func (c *Confirmer) DequeueTx(ctx context.Context) error {
+func (c *Confirmer) DequeueTx(ctx context.Context) (h string, err error) {
 	v, isEmpty := c.queue.Dequeue()
 	if isEmpty {
-		return nil
+		return
 	}
 
 	var (
 		e   = v.(entry)
 		now = time.Now().Unix()
 	)
+
+	h = e.hash
+
 	if now < e.updatedAt+c.confirmationInterval {
 		if err := c.queue.Enqueue(e); err != nil {
-			return errors.Wrap(err, "err Enqueue")
+			return e.hash, errors.Wrap(err, "err Enqueue")
 		}
-		return nil
+		return e.hash, nil
 	}
 
-	if err := c.client.ConfirmTx(ctx, e.hash, c.confirmationBlocks); err != nil {
+	if err = c.client.ConfirmTx(ctx, e.hash, c.confirmationBlocks); err != nil {
 		if errors.Is(err, ErrTxNotFound) || errors.Is(err, ErrTxConfirmPending) {
 			e.updatedAt = now
 			if err = c.queue.Enqueue(e); err != nil {
-				return errors.Wrap(err, "err Enqueue")
+				err = errors.Wrap(err, "err Enqueue")
+				return
 			}
-			return nil
+			return
 		}
 
-		return errors.Wrap(err, "err ConfirmTx")
+		err = errors.Wrap(err, "err ConfirmTx")
+		return
 	}
 
-	if err := c.afterTxConfirmed(e.hash); err != nil {
-		return errors.Wrap(err, "err afterTxSent")
+	if err = c.afterTxConfirmed(e.hash); err != nil {
+		err = errors.Wrap(err, "err afterTxSent")
+		return
 	}
 
-	return nil
+	return
 }
 
 func (c *Confirmer) QueueLen() int {
@@ -138,8 +144,8 @@ func (c *Confirmer) Start(ctx context.Context) error {
 				ctx, cancel := c.withTimeout()
 				defer cancel()
 
-				if err := c.DequeueTx(ctx); err != nil {
-					c.errHandler(err)
+				if hash, err := c.DequeueTx(ctx); err != nil {
+					c.errHandler(hash, err)
 				}
 			}
 		}

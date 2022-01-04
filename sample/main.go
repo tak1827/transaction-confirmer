@@ -21,7 +21,7 @@ var (
 func main() {
 	var (
 		ctx, cancel = context.WithCancel(context.Background())
-		txStore = txStore()
+		txStore     = txStore()
 	)
 
 	client, err := NewClient(ctx, Endpoint)
