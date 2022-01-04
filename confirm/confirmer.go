@@ -25,9 +25,9 @@ type Confirmer struct {
 	workerInterval       int64 // milisec
 	timeout              int64 // sec
 
-	afterTxSent      HashHandler
-	afterTxConfirmed HashHandler
-	errHandler       ErrHandler
+	AfterTxSent      HashHandler
+	AfterTxConfirmed HashHandler
+	ErrHandler       ErrHandler
 
 	closeCounter uint32
 }
@@ -52,9 +52,9 @@ func NewConfirmer(client Client, queueSize int, opts ...Opt) Confirmer {
 		workers:              DEFAULT_WORKERS,
 		workerInterval:       DEFAULT_WORKER_INTERVAL,
 		timeout:              DEFAULT_TIMEOUT,
-		afterTxSent:          DefaultAfterTxSent,
-		afterTxConfirmed:     DefaultAfterTxConfirmed,
-		errHandler:           DefaultErrHandler,
+		AfterTxSent:          DefaultAfterTxSent,
+		AfterTxConfirmed:     DefaultAfterTxConfirmed,
+		ErrHandler:           DefaultErrHandler,
 		closeCounter:         0,
 	}
 
@@ -71,7 +71,7 @@ func (c *Confirmer) EnqueueTx(ctx context.Context, tx interface{}) error {
 		return errors.Wrap(err, "err SendTx")
 	}
 
-	if err = c.afterTxSent(hash); err != nil {
+	if err = c.AfterTxSent(hash); err != nil {
 		return errors.Wrap(err, "err afterTxSent")
 	}
 
@@ -121,7 +121,7 @@ func (c *Confirmer) DequeueTx(ctx context.Context) (h string, err error) {
 		return
 	}
 
-	if err = c.afterTxConfirmed(e.hash); err != nil {
+	if err = c.AfterTxConfirmed(e.hash); err != nil {
 		err = errors.Wrap(err, "err afterTxSent")
 		return
 	}
@@ -150,7 +150,7 @@ func (c *Confirmer) Start(ctx context.Context) error {
 				defer cancel()
 
 				if hash, err := c.DequeueTx(ctx); err != nil {
-					c.errHandler(hash, err)
+					c.ErrHandler(hash, err)
 				}
 			}
 		}
