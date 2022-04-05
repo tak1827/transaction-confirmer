@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/lithdew/bytesutil"
 	"github.com/pkg/errors"
 	"github.com/tak1827/go-queue/queue"
 )
@@ -75,9 +76,9 @@ func (c *Confirmer) EnqueueTx(ctx context.Context, tx interface{}) error {
 		return errors.Wrap(err, "err afterTxSent")
 	}
 
-	e := entry{
-		hash:      hash,
-		updatedAt: time.Now().Unix(),
+	e := &queue.Entry{
+		Key:   hash,
+		Value: bytesutil.AppendUint64LE([]byte{}, uint64(time.Now().Unix())),
 	}
 
 	if err = c.queue.Enqueue(e); err != nil {
@@ -87,46 +88,42 @@ func (c *Confirmer) EnqueueTx(ctx context.Context, tx interface{}) error {
 	return nil
 }
 
-func (c *Confirmer) DequeueTx(ctx context.Context) (h string, err error) {
-	v, isEmpty := c.queue.Dequeue()
+func (c *Confirmer) DequeueTx(ctx context.Context) (string, error) {
+	e, isEmpty := c.queue.Dequeue()
 	if isEmpty {
-		return
+		return "", nil
 	}
 
 	var (
-		e   = v.(entry)
-		now = time.Now().Unix()
+		hash      = e.Key
+		updatedAt = int64(bytesutil.Uint64LE(e.Value))
+		now       = time.Now().Unix()
 	)
 
-	h = e.hash
-
-	if now < e.updatedAt+c.confirmationInterval {
+	if now < updatedAt+c.confirmationInterval {
 		if err := c.queue.Enqueue(e); err != nil {
-			return e.hash, errors.Wrap(err, "err Enqueue")
+			return hash, errors.Wrap(err, "err Enqueue")
 		}
-		return e.hash, nil
+		return hash, nil
 	}
 
-	if err = c.client.ConfirmTx(ctx, e.hash, c.confirmationBlocks); err != nil {
+	if err := c.client.ConfirmTx(ctx, hash, c.confirmationBlocks); err != nil {
 		if errors.Is(err, ErrTxNotFound) || errors.Is(err, ErrTxConfirmPending) {
-			e.updatedAt = now
+			e.Value = bytesutil.AppendUint64LE([]byte{}, uint64(now))
 			if err = c.queue.Enqueue(e); err != nil {
-				err = errors.Wrap(err, "err Enqueue")
-				return
+				return hash, errors.Wrap(err, "err Enqueue")
 			}
-			return
+			return hash, nil
 		}
 
-		err = errors.Wrap(err, "err ConfirmTx")
-		return
+		return hash, errors.Wrap(err, "err ConfirmTx")
 	}
 
-	if err = c.AfterTxConfirmed(e.hash); err != nil {
-		err = errors.Wrap(err, "err afterTxSent")
-		return
+	if err := c.AfterTxConfirmed(hash); err != nil {
+		return hash, errors.Wrap(err, "err afterTxSent")
 	}
 
-	return
+	return hash, nil
 }
 
 func (c *Confirmer) QueueLen() int {
