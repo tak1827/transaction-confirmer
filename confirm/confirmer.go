@@ -88,6 +88,19 @@ func (c *Confirmer) EnqueueTx(ctx context.Context, tx interface{}) error {
 	return nil
 }
 
+func (c *Confirmer) EnqueueTxHash(ctx context.Context, hash string) error {
+	e := &queue.Entry{
+		Key:   hash,
+		Value: bytesutil.AppendUint64LE([]byte{}, uint64(time.Now().Unix())),
+	}
+
+	if err := c.queue.Enqueue(e); err != nil {
+		return errors.Wrap(err, "err Enqueue")
+	}
+
+	return nil
+}
+
 func (c *Confirmer) DequeueTx(ctx context.Context) (string, error) {
 	e, isEmpty := c.queue.Dequeue()
 	if isEmpty {
